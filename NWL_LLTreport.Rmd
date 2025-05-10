@@ -1,0 +1,547 @@
+
+```{r}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(forecast)
+library(lubridate)
+```
+
+
+
+Load datasets 
+```{r}
+# I used the names that are easy to read for my dataframes
+CVDtreated <- read_excel("~/Desktop/RProjects/ICHPProject/cvd_export_[Cholesterol_ CVD treated with LLT (CVDP009CHOL)].xlsx", sheet=2)
+primary_prevention <- read_excel("~/Desktop/RProjects/ICHPProject/cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx", sheet=2)
+```
+
+# View the datasets
+```{r}
+head(CVDtreated)
+head(primary_prevention)
+unique(CVDtreated$AreaName) # Check unique values in AreaName column to confirm the labelling of NWL
+```
+
+
+North West London ICB is identified as "NHS North West London ICB - W2U3Z" in both datasets.
+
+
+# Question 1: The number of patients with CVD (secondary prevention) in NWL who are not currently on LLT
+
+## Calculate the number of patients not currently on LLT in the threshold
+```{r}
+CVDtreated_NWL <- CVDtreated[CVDtreated$AreaName == "NHS North West London ICB - W2U3Z", ] # Filter out rows that are not NHS NWL ICB in the CVDtreated
+CVDtreated_persons <- CVDtreated_NWL[CVDtreated_NWL$MetricCategoryName == "Persons", ] # Filter the row where CategoryAttribute is "Persons"
+CVDtreated_not_on_LLT <- sum(CVDtreated_persons$Denominator - CVDtreated_persons$Numerator, na.rm = TRUE)
+
+print(paste("CVD Patients in NWL not currently on LLT:", CVDtreated_not_on_LLT))
+```
+
+
+
+
+# Question 2: The number of patients at high risk of CVD (primary prevention) who are not currently on LLT
+
+
+## Calculate high risk patients in primary prevention who are not currently on LLT
+```{r}
+primary_prevention_NWL <- primary_prevention[primary_prevention$AreaName == "NHS North West London ICB - W2U3Z", ]
+primary_prevention_NWL_age <- primary_prevention_NWL[primary_prevention_NWL$MetricCategoryTypeName == "Age group", ]
+primary_prevention_NWL_age <- primary_prevention_NWL_age[primary_prevention_NWL_age$CategoryAttribute == "Persons", ]
+# High risk patients are those 40 years and above
+primary_prevention_highrisk <- primary_prevention_NWL_age[primary_prevention_NWL_age$MetricCategoryName != "18-39", ]
+primary_prevention_no_LLT <- sum(primary_prevention_highrisk$Denominator) - sum(primary_prevention_highrisk$Numerator)
+
+print(paste("The CVD patients who are highrisk and not currently of LLT:", primary_prevention_no_LLT))
+
+```
+
+
+
+
+# Question 3: Are there any other insights in the data for either of the two cohorts above that could be of importance to the team?
+I will compare the Gender,age,  ethnicity, and deprivation quintile distributions across the both cohorts.
+These comparisons will be plotted on bar charts.
+
+## Gender distribution
+
+### Gender distribution for secondary prevention cohort
+```{r}
+CVDtreated_sex <- CVDtreated_NWL[CVDtreated_NWL$MetricCategoryName %in% c("Male", "Female"), ]
+CVDtreated_male_no_LLT <- CVDtreated_sex$Denominator[CVDtreated_sex$CategoryAttribute == "Male"] - CVDtreated_sex$Numerator[CVDtreated_sex$CategoryAttribute == "Male"] 
+CVDtreated_female_no_LLT <- CVDtreated_sex$Denominator[CVDtreated_sex$CategoryAttribute == "Female"] - CVDtreated_sex$Numerator[CVDtreated_sex$CategoryAttribute == "Female"]
+
+#print the values
+print(paste0("Total number of Males patients in the secondary prevention cohort, who are not currently on LLT:", CVDtreated_male_no_LLT))
+print(paste0("Total number of Females patients in the secondary prevention cohort, who are not currently on LLT:", CVDtreated_female_no_LLT))
+```
+
+
+### Gender distribution for primary prevention cohort
+```{r}
+# Calculate for primary_prevention
+primary_prevention_NWL_sex <- primary_prevention_NWL[primary_prevention_NWL$CategoryAttribute %in% c("Male", "Female"), ]
+primary_prevention_sex_highrisk <- primary_prevention_NWL_sex[primary_prevention_NWL_sex$MetricCategoryName %in% c("40-59", "60-79", "80+"), ]
+primary_prevention_NWL_male_no_LLT <- sum(primary_prevention_sex_highrisk$Denominator[primary_prevention_sex_highrisk$CategoryAttribute == "Male"]) - sum(primary_prevention_sex_highrisk$Numerator[primary_prevention_sex_highrisk$CategoryAttribute == "Male"]) # Subract the number of patients cureently on LLT
+primary_prevention_NWL_female_no_LLT <- sum(primary_prevention_sex_highrisk$Denominator[primary_prevention_sex_highrisk$CategoryAttribute == "Female"]) - sum(primary_prevention_sex_highrisk$Numerator[primary_prevention_sex_highrisk$CategoryAttribute == "Female"]) # Subract the number of patients currently on LLT
+
+
+#print the values
+print(paste0("Total number of Male patients in the primary prevention cohort, who are not currently on LLT:", primary_prevention_NWL_male_no_LLT))
+print(paste0("Total number of Females patients in the primary prevention cohort, who are not currently on LLT:", primary_prevention_NWL_female_no_LLT))
+
+```
+
+
+### Plot a bar chart to compare the Gender from both cohorts
+```{r}
+# Create the data frame
+data <- data.frame(
+  Cohort = c("Secondary Prevention", "Secondary Prevention", "Primary Prevention", "Primary Prevention"),
+  Gender = c("Male", "Female", "Male", "Female"),
+  Patients = c(6750, 6210, 64130, 47960)
+)
+
+# Calculate percentages within each cohort
+data <- data %>%
+  group_by(Cohort) %>%
+  mutate(Percentage = Patients / sum(Patients) * 100)
+
+# Create the bar chart with navy blue and gold colors
+ggplot(data, aes(x = Cohort, y = Percentage, fill = Gender)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = sprintf("%.1f%%", Percentage)), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3.5) +
+  labs(title = "Gender Distribution of Patients Not on LLT by Cohort",
+       x = "Cohort",
+       y = "Percentage of Patients") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Male" = "#000080", "Female" = "#DAA520")) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  coord_cartesian(ylim = c(0, 100))
+
+```
+
+
+
+
+## Age distribution across cohorts
+
+### Age Distribution for secondary prevention cohort
+```{r}
+CVDtreated_age_group <- CVDtreated_NWL[CVDtreated_NWL$MetricCategoryTypeName == "Age group", ]
+CVDtreated_age_list <- CVDtreated_age_group[CVDtreated_age_group$CategoryAttribute != "Persons", ]
+CVDtreated_18_39_no_LLT <- sum(CVDtreated_age_list$Denominator[CVDtreated_age_list$MetricCategoryName == "18-39"], na.rm = TRUE) - sum(CVDtreated_age_list$Numerator[CVDtreated_age_list$MetricCategoryName == "18-39"], na.rm = TRUE)
+CVDtreated_40_59_no_LLT <- sum(CVDtreated_age_list$Denominator[CVDtreated_age_list$MetricCategoryName == "40-59"], na.rm = TRUE) - sum(CVDtreated_age_list$Numerator[CVDtreated_age_list$MetricCategoryName == "40-59"], na.rm = TRUE)
+CVDtreated_60_79_no_LLT <- sum(CVDtreated_age_list$Denominator[CVDtreated_age_list$MetricCategoryName == "60-79"], na.rm = TRUE) - sum(CVDtreated_age_list$Numerator[CVDtreated_age_list$MetricCategoryName == "60-79"], na.rm = TRUE)
+CVDtreated_80above_no_LLT <- sum(CVDtreated_age_list$Denominator[CVDtreated_age_list$MetricCategoryName == "80+"], na.rm = TRUE) - sum(CVDtreated_age_list$Numerator[CVDtreated_age_list$MetricCategoryName == "80+"], na.rm = TRUE)
+
+# Print results for each age category
+print(paste0("Total patients in the age group 18-39 not on LLT in the Secondary Prevention cohort:", CVDtreated_18_39_no_LLT))
+print(paste0("Total patients in the age group 40-59 not on LLT in the Secondary Prevention cohort:", CVDtreated_40_59_no_LLT))
+print(paste0("Total patients in the age group 60-79 not on LLT in the Secondary Prevention cohort:", CVDtreated_60_79_no_LLT))
+print(paste0("Total patients in the age group 80+ not on LLT in the Secondary Prevention cohort:", CVDtreated_80above_no_LLT))
+```
+
+
+### Age Distribution for primary prevention cohort
+```{r}
+# Calculate for primary_prevention
+primary_prevention_NWL_age_group <- primary_prevention_NWL[primary_prevention_NWL$MetricCategoryTypeName == "Age group", ]
+primary_prevention_NWL_age_list <- primary_prevention_NWL_age_group[primary_prevention_NWL_age_group$CategoryAttribute != "Persons", ]
+#primary_prevention_NWL_18_39_no_LLT <- sum(primary_prevention_NWL_age_list$Denominator[primary_prevention_NWL_age_list$MetricCategoryName == "18-39"]) - sum(primary_prevention_NWL_age_list$Numerator[primary_prevention_NWL_age_list$MetricCategoryName == "18-39"]) This is not part of the calculation
+primary_prevention_NWL_40_59_no_LLT <- sum(primary_prevention_NWL_age_list$Denominator[primary_prevention_NWL_age_list$MetricCategoryName == "40-59"]) - sum(primary_prevention_NWL_age_list$Numerator[primary_prevention_NWL_age_list$MetricCategoryName == "40-59"])
+primary_prevention_NWL_60_79_no_LLT <- sum(primary_prevention_NWL_age_list$Denominator[primary_prevention_NWL_age_list$MetricCategoryName == "60-79"]) - sum(primary_prevention_NWL_age_list$Numerator[primary_prevention_NWL_age_list$MetricCategoryName == "60-79"])
+primary_prevention_NWL_80above_no_LLT <- sum(primary_prevention_NWL_age_list$Denominator[primary_prevention_NWL_age_list$MetricCategoryName == "80+"]) - sum(primary_prevention_NWL_age_list$Numerator[primary_prevention_NWL_age_list$MetricCategoryName == "80+"])
+
+
+#print(paste0("Total patients not on LLT in the Primary Prevention cohort aged 18-39:", primary_prevention_NWL_18_39_no_LLT))
+print(paste0("Total patients not on LLT in the Primary Prevention cohort aged 40-59:", primary_prevention_NWL_40_59_no_LLT))
+print(paste0("Total patients not on LLT in the Primary Prevention cohort aged 60-79:", primary_prevention_NWL_60_79_no_LLT))
+print(paste0("Total patients not on LLT in the Primary Prevention cohort aged 80+:", primary_prevention_NWL_80above_no_LLT))
+```
+
+### Plot the charts to compare both cohorts
+```{r}
+# Create a data frame with the provided data
+data <- data.frame(
+  Cohort = rep(c("Secondary Prevention", "Primary Prevention"), each = 4),
+  AgeGroup = rep(c("18-39", "40-59", "60-79", "80+"), 2),
+  Patients = c(820, 3160, 4740, 4235, 0, 24835, 71685, 15570)
+)
+
+# Calculate percentages and create labels
+data <- data %>%
+  group_by(Cohort) %>%
+  mutate(Percentage = abs(Patients) / sum(abs(Patients)) * 100,
+         Label = sprintf("%.1f%%", Percentage))
+
+# Create the bar chart with navy and gold colors
+ggplot(data, aes(x = AgeGroup, y = Percentage, fill = Cohort)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = Label), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, 
+            size = 3.5) +
+  labs(title = "Age Group Distribution of Patients Not on LLT by Cohort",
+       subtitle = "Note: Percentages based on absolute values",
+       x = "Age Group",
+       y = "Percentage of Patients") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Secondary Prevention" = "#000080", 
+                              "Primary Prevention" = "#DAA520")) +  # Navy blue and gold
+  theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  coord_cartesian(ylim = c(0, max(data$Percentage) * 1.1))
+
+```
+
+
+
+
+
+The other categories for primary prevention would not be actual values, because they were categorised on the same column. These are just information.
+
+
+## Ethnicity distribution
+
+
+### Ethnicity distribution for secondary prevention cohort
+```{r}
+
+# Filter the data based on "Ethnicity"
+CVDtreated_race <- CVDtreated_NWL[CVDtreated_NWL$MetricCategoryTypeName == "Ethnicity", ]
+# Calculate and remove NA values during the subtraction
+CVDtreated_asian_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "Asian"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "Asian"], na.rm = TRUE)
+CVDtreated_black_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "Black"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "Black"], na.rm = TRUE)
+CVDtreated_mixed_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "Mixed"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "Mixed"], na.rm = TRUE)
+CVDtreated_white_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "White"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "White"], na.rm = TRUE)
+CVDtreated_other_race_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "Other"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "Other"], na.rm = TRUE)
+CVDtreated_notstated_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "Not stated"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "Not stated"], na.rm = TRUE)
+CVDtreated_missing_no_LLT <- sum(CVDtreated_race$Denominator[CVDtreated_race$MetricCategoryName == "Missing"] - CVDtreated_race$Numerator[CVDtreated_race$MetricCategoryName == "Missing"], na.rm = TRUE)
+
+# Print results for each race category
+print(paste0("Total Asian patients not on LLT in the Secondary Prevention cohort:", CVDtreated_asian_no_LLT))
+print(paste0("Total Black patients not on LLT in the Secondary Prevention cohort:", CVDtreated_black_no_LLT))
+print(paste0("Total Mixed patients not on LLT in the Secondary Prevention cohort:", CVDtreated_mixed_no_LLT))
+print(paste0("Total White patients not on LLT in the Secondary Prevention cohort:", CVDtreated_white_no_LLT))
+print(paste0("Total Other race patients not on LLT in the Secondary Prevention cohort:", CVDtreated_other_race_no_LLT))
+print(paste0("Total Not Stated patients not on LLT in the Secondary Prevention cohort:", CVDtreated_notstated_no_LLT))
+print(paste0("Total Missing patients not on LLT in the Secondary Prevention cohort:", CVDtreated_missing_no_LLT))
+```
+### Ethnicity distribution for the primary intervention cohorts
+```{r}
+# Calculate for primary_prevention
+# This is not the actual. The highrisk patients are supposed to be from age 40-80+. This cannot be obtained given that the data had been suppressed and categorised along the same column. Hence the calculation is for all the primary prevention patients
+primary_prevention_NWL_race <- primary_prevention_NWL[primary_prevention_NWL$MetricCategoryTypeName == "Ethnicity", ]
+primary_prevention_NWL_asian_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "Asian"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "Asian"]
+primary_prevention_NWL_black_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "Black"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "Black"]
+primary_prevention_NWL_mixed_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "Mixed"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "Mixed"]
+primary_prevention_NWL_white_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "White"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "White"]
+primary_prevention_NWL_other_race_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "Other"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "Other"]
+primary_prevention_NWL_notstated_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "Not stated"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "Not stated"]
+primary_prevention_NWL_missing_no_LLT <- primary_prevention_NWL_race$Denominator[primary_prevention_NWL_race$MetricCategoryName == "Missing"] - primary_prevention_NWL_race$Numerator[primary_prevention_NWL_race$MetricCategoryName == "Missing"]
+
+
+
+
+
+print(paste0("Total Asian patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_asian_no_LLT))
+print(paste0("Total Black patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_black_no_LLT))
+print(paste0("Total Mixed patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_mixed_no_LLT))
+print(paste0("Total White patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_white_no_LLT))
+print(paste0("Total Other race patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_other_race_no_LLT))
+print(paste0("Total Not Stated patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_notstated_no_LLT))
+print(paste0("Total Missing patients not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_missing_no_LLT))
+
+```
+
+### Plot a bar chart of the Ethnicity from both cohorts
+```{r}
+
+data <- data.frame(
+  Cohort = rep(c("Secondary Prevention", "Primary Prevention"), each = 7),
+  Race = rep(c("Asian", "Black", "Mixed", "White", "Other", "Not Stated", "Missing"), 2),
+  Patients = c(3310, 1380, 350, 6615, 610, 490, 195,
+               34380, 10175, 2445, 56670, 4430, 3290, 1460)
+)
+
+# Calculate percentages within each cohort
+data <- data %>%
+  group_by(Cohort) %>%
+  mutate(Percentage = Patients / sum(Patients) * 100)
+
+# Plot bar chart with navy and gold colors
+ggplot(data, aes(x = Race, y = Percentage, fill = Cohort)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = sprintf("%.1f%%", Percentage)), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3) +
+  labs(title = "Racial Demographics of Patients Not on LLT by Cohort",
+       x = "Race",
+       y = "Percentage of Patients") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  scale_fill_manual(values = c("Secondary Prevention" = "#000080", 
+                              "Primary Prevention" = "#DAA520")) +  # Navy blue and gold
+  ylim(0, max(data$Percentage) * 1.1)
+```
+
+
+
+
+
+## Deprivation quintile (IMD) distribution across cohorts
+
+### Deprivation quitile distribution for the secondary prevention cohorts
+```{r}
+
+CVDtreated_IMD <- CVDtreated_NWL[CVDtreated_NWL$MetricCategoryTypeName == "Deprivation quintile", ]
+# Calculate for the "1 - most deprived" category in IMD, handling NA values
+CVDtreated_IMD1_no_LLT <- sum(CVDtreated_IMD$Denominator[CVDtreated_IMD$MetricCategoryName == "1 - most deprived"], na.rm = TRUE) - sum(CVDtreated_IMD$Numerator[CVDtreated_IMD$MetricCategoryName == "1 - most deprived"], na.rm = TRUE)
+CVDtreated_IMD2_no_LLT <- sum(CVDtreated_IMD$Denominator[CVDtreated_IMD$MetricCategoryName == "2"], na.rm = TRUE) - sum(CVDtreated_IMD$Numerator[CVDtreated_IMD$MetricCategoryName == "2"], na.rm = TRUE)
+CVDtreated_IMD3_no_LLT <- sum(CVDtreated_IMD$Denominator[CVDtreated_IMD$MetricCategoryName == "3"], na.rm = TRUE) - sum(CVDtreated_IMD$Numerator[CVDtreated_IMD$MetricCategoryName == "3"], na.rm = TRUE)
+CVDtreated_IMD4_no_LLT <- sum(CVDtreated_IMD$Denominator[CVDtreated_IMD$MetricCategoryName == "4"], na.rm = TRUE) - sum(CVDtreated_IMD$Numerator[CVDtreated_IMD$MetricCategoryName == "4"], na.rm = TRUE)
+CVDtreated_IMD5_no_LLT <- sum(CVDtreated_IMD$Denominator[CVDtreated_IMD$MetricCategoryName == "5 - least deprived"], na.rm = TRUE) - sum(CVDtreated_IMD$Numerator[CVDtreated_IMD$MetricCategoryName == "5 - least deprived"], na.rm = TRUE)
+
+
+# Print results for each IMD category
+print(paste0("Total patients in IMD1 not on LLT in the Secondary Prevention cohort:", CVDtreated_IMD1_no_LLT))
+print(paste0("Total patients in IMD2 not on LLT in the Secondary Prevention cohort:", CVDtreated_IMD2_no_LLT))
+print(paste0("Total patients in IMD3 not on LLT in the Secondary Prevention cohort:", CVDtreated_IMD3_no_LLT))
+print(paste0("Total patients in IMD4 not on LLT in the Secondary Prevention cohort:", CVDtreated_IMD4_no_LLT))
+print(paste0("Total patients in IMD5 not on LLT in the Secondary Prevention cohort:", CVDtreated_IMD5_no_LLT))
+```
+
+
+```{r}
+# Calculate for primary_prevention
+# This is not the actual. The highrisk patients are supposed to be from age 40-80+. This cannot be obtained given that the data had been suppressed and categorised along the same column.
+primary_prevention_NWL_IMD <- primary_prevention_NWL[primary_prevention_NWL$MetricCategoryTypeName == "Deprivation quintile", ]
+primary_prevention_NWL_IMD1_no_LLT <- primary_prevention_NWL_IMD$Denominator[primary_prevention_NWL_IMD$MetricCategoryName == "1 - most deprived"] - primary_prevention_NWL_IMD$Numerator[primary_prevention_NWL_IMD$MetricCategoryName == "1 - most deprived"]
+primary_prevention_NWL_IMD2_no_LLT <- primary_prevention_NWL_IMD$Denominator[primary_prevention_NWL_IMD$MetricCategoryName == "2"] - primary_prevention_NWL_IMD$Numerator[primary_prevention_NWL_IMD$MetricCategoryName == "2"]
+primary_prevention_NWL_IMD3_no_LLT <- primary_prevention_NWL_IMD$Denominator[primary_prevention_NWL_IMD$MetricCategoryName == "3"] - primary_prevention_NWL_IMD$Numerator[primary_prevention_NWL_IMD$MetricCategoryName == "3"]
+primary_prevention_NWL_IMD4_no_LLT <- primary_prevention_NWL_IMD$Denominator[primary_prevention_NWL_IMD$MetricCategoryName == "4"] - primary_prevention_NWL_IMD$Numerator[primary_prevention_NWL_IMD$MetricCategoryName == "4"]
+primary_prevention_NWL_IMD5_no_LLT <- primary_prevention_NWL_IMD$Denominator[primary_prevention_NWL_IMD$MetricCategoryName == "5 - least deprived"] - primary_prevention_NWL_IMD$Numerator[primary_prevention_NWL_IMD$MetricCategoryName == "5 - least deprived"]
+
+
+
+# Print values for the respective deprivation quintiles
+print(paste0("Total patients in IMD1 who are not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_IMD1_no_LLT))
+print(paste0("Total patients in IMD2 who are not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_IMD2_no_LLT))
+print(paste0("Total patients in IMD3 who are not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_IMD3_no_LLT))
+print(paste0("Total patients in IMD4 who are not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_IMD4_no_LLT))
+print(paste0("Total patients in IMD5 who are not on LLT in the Primary Prevention cohort:", primary_prevention_NWL_IMD5_no_LLT))
+```
+
+
+```{r}
+data <- data.frame(
+  Cohort = rep(c("Secondary Prevention", "Primary Prevention"), each = 5),
+  IMDQuintile = rep(c("IMD1", "IMD2", "IMD3", "IMD4", "IMD5"), 2),
+  Patients = c(1670, 3915, 3620, 2425, 1140, 14540, 34210, 32065, 21215, 9995)
+)
+
+# Calculate percentages within each cohort
+data <- data %>%
+  group_by(Cohort) %>%
+  mutate(Percentage = Patients / sum(Patients) * 100,
+         Label = sprintf("%.1f%%", Percentage))
+
+# Create the bar chart
+ggplot(data, aes(x = IMDQuintile, y = Percentage, fill = Cohort)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = Label), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3.5) +
+  labs(title = "IMD Quintile Distribution of Patients not on LLT by Cohort",
+       x = "IMD Quintile",
+       y = "Percentage of Patients") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Secondary Prevention" = "#000080", 
+                              "Primary Prevention" = "#DAA520")) + 
+  theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  coord_cartesian(ylim = c(0, max(data$Percentage) * 1.1))
+
+```
+
+
+# Answer question 4: What has been the trend in the above cohorts since September 2021, and can we predict what the likely number of patients with CVD or at high risk of CVD in NWL will be in 1 or 2 years based on the historical trend?
+For this question, I downloaded the quarterly reports until June 2024. I have merged the files and exported them using the following codes: 
+
+```{r}
+#files <- c("/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/march2022cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#           "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/june2022cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#           "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/sept2022cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#           "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/dec2022cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#          "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/march2023cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#           "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/june2023cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#           "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/sept2023cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#          "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/dec2023cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#          "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/march2024cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx",
+#           "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/june2024cvd_export_[Cholesterol_ Primary prevention of CVD treated with LLT (CVDP008CHOL)].xlsx")
+
+
+# Initialize an empty list to store the data from each file
+#data_list <- list()
+
+# Loop over each file, read the second sheet, and store it in the list
+#for (file in files) {
+#  data <- read_excel(file, sheet = 2)  # Reading the second sheet
+#  data_list[[file]] <- data
+#}
+
+# Bind the data row-wise (this merges them vertically)
+#merged_data <- bind_rows(data_list)
+
+# Save the merged file as a CSV
+#write.csv(merged_data, "/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort/merged_row_wise_output.csv", row.names = FALSE)
+
+# Show first few rows of the merged data
+#head(merged_data)
+```
+
+
+I will continue here with the merged file.
+
+```{r}
+# load files
+primary_prevention_cohort <- read.csv("/Users/emeka/Desktop/RProjects/ICHPProject/primary_prevention_cohort.csv")
+secondary_prevention_cohort <- read.csv("/Users/emeka/Desktop/RProjects/ICHPProject/secondary_prevention_cohort.csv")
+
+unique(primary_prevention_cohort$AreaName)
+#unique(secondary_prevention_cohort$AreaName)
+```
+
+
+
+NWL ICB is represented by :
+"North West London Health and Care Partnership" before June 2022, and
+"NHS North Central London Integrated Care Board" from June 2022
+
+```{r}
+
+# Filter for the specified Area Names for NWL ICB in primary prevention dataset
+primary <- primary_prevention_cohort[
+  primary_prevention_cohort$AreaName %in% c("North West London Health and Care Partnership", 
+                                          "NHS North Central London Integrated Care Board"), 
+]
+
+# Filter for the specified Area Names in secondary prevention dataset
+secondary <- secondary_prevention_cohort[
+  secondary_prevention_cohort$AreaName %in% c("North West London Health and Care Partnership", 
+                                            "NHS North Central London Integrated Care Board"), 
+]
+
+# Check the filtered data
+primary
+secondary
+```
+
+
+
+Calculate the values for the cohorts
+```{r}
+# Add No_LLT column to primary dataframe
+primary <- primary %>%
+  mutate(No_LLT = Denominator - Numerator)
+
+# Add No_LLT column to secondary dataframe
+secondary <- secondary %>%
+  mutate(No_LLT = Denominator - Numerator)
+
+print(primary %>% select(Denominator, Numerator, No_LLT))
+print(secondary %>% select(Denominator, Numerator, No_LLT))
+```
+
+Add date column
+```{r}
+prepare_for_timeseries <- function(df) {
+# Create new Date column from TimePeriodName
+df$Date <- gsub("^To\\s+", "", df$TimePeriodName)
+# Convert to proper Date format (first day of each month)
+df$Date <- as.Date(paste0("01 ", df$Date), format = "%d %B %Y")
+df <- df[order(df$Date), ]
+return(df)
+}
+
+# Apply the function to each dataframe separately
+primary <- prepare_for_timeseries(primary)
+secondary <- prepare_for_timeseries(secondary)
+
+# To verify the results
+print(primary$Date)
+print(secondary$Date)
+```
+
+## Primary prevention timeseries and forecast
+
+```{r}
+primary$Date <- as.Date(primary$Date)
+start_year <- year(min(primary$Date))
+start_quarter <- quarter(min(primary$Date))
+cohort_tp <- ts(primary$No_LLT, start = c(start_year, start_quarter), frequency = 4)
+plot.ts(cohort_tp, 
+        main = "Timeseries of Patients in Primary Prevention not Currently on LLT", 
+        xlab = "Date", 
+        ylab = "Number of People", 
+        col = "navyblue",  # Set the color of the line
+        lwd = 2,  # Set the width of the line
+        bty = "l",  # Remove the box border to make it look cleaner
+        las = 1)  # Rotate the y-axis labels
+
+# Fit ARIMA model
+fit <- auto.arima(cohort_tp)
+# Forecast for the next 8 quarters (2 years)
+forecast_values <- forecast(fit, h = 8)
+plot(forecast_values, 
+     main = "Forecast for Patients in Primary Prevention not Currently on LLT", 
+     xlab = "Date", 
+     ylab = "Number of People",
+     col = "navyblue", 
+     lwd = 2,  
+     shaded = TRUE, 
+     shadecols = c("lightblue", "skyblue"))
+
+print(forecast_values)
+```
+
+
+## Secondary prevention timeseries and forecast
+```{r}
+secondary$Date <- as.Date(secondary$Date)
+start_year <- year(min(secondary$Date))
+start_quarter <- quarter(min(secondary$Date))
+cohort_ts <- ts(secondary$No_LLT, start = c(start_year, start_quarter), frequency = 4)
+plot.ts(cohort_ts, 
+        main = "Timeseries of Patients in Secondary Prevention not Currently on LLT", 
+        xlab = "Date", 
+        ylab = "Number of People", 
+        col = "#DAA520",  
+        lwd = 2, 
+        bty = "l",  
+        las = 1)  
+
+# Fit ARIMA model
+fit <- auto.arima(cohort_ts)
+# Forecast for the next 8 quarters (2 years)
+forecast_values <- forecast(fit, h = 8)
+plot(forecast_values, 
+     main = "Forecast for Patients in Secondary Prevention not Currently on LLT", 
+     xlab = "Date", 
+     ylab = "Number of People",
+     col = "#DAA520",
+     lwd = 2, 
+     shaded = TRUE,
+     shadecols = c("#FFD700", "#DAA520")) 
+
+print(forecast_values)
+```
+
+
+
