@@ -11,16 +11,16 @@ The task involved using **CVDPREVENT open data** to identify patients in NWL who
 
 Commissioned as part of the NWL ICS Missions programme, this analysis addresses the following:
 
-- 📌 **How many patients with existing CVD (secondary prevention) are not on LLT?**
-- 📌 **How many high-risk patients (primary prevention) are not on LLT?**
-- 📌 **Are there disparities in uptake across boroughs or population groups?**
-- 📌 **What are the trends since Sept 2021, and what can we predict for the next 1–2 years?**
+-  **How many patients with existing CVD (secondary prevention) are not on LLT?**
+-  **How many high-risk patients (primary prevention) are not on LLT?**
+-  **Are there disparities in uptake across boroughs or population groups?**
+-  **What are the trends since Sept 2021, and what can we predict for the next 1–2 years?**
 
 The analysis informs targeted interventions for reducing cardiovascular risk and improving equity across North West London.
 
 
 
-## 📊 Data & Sources
+##  Data & Sources
 
 - **Dataset:** NHS CVDPREVENT Data Extract (September 2021 – March 2024)
   - `CVDP009CHOL` – Treated with LLT (CVD, secondary prevention)
@@ -68,15 +68,12 @@ The analysis informs targeted interventions for reducing cardiovascular risk and
 
 
 
-##  Contact
-
-Prepared by [@BuchiEnechukwu](https://github.com/BuchiEnechukwu)  
-Please contact via GitHub for questions or collaboration.
-
-
-
 ## Relevance
 The findings inform public health and primary care strategies to close LLT gaps and improve secondary prevention in cardiovascular care—especially for high-risk and underserved populations.
 
+
+
 ## Author
 Onyebuchi Enechukwu
+[@BuchiEnechukwu](https://github.com/BuchiEnechukwu)  
+Please contact via GitHub for questions or collaboration.
