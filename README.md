@@ -69,7 +69,7 @@ The analysis informs targeted interventions for reducing cardiovascular risk and
 
 
 ## Relevance
-The findings inform public health and primary care strategies to close LLT gaps and improve secondary prevention in cardiovascular care—especially for high-risk and underserved populations.
+The findings inform public health and primary care strategies to close LLT gaps and improve secondary prevention in cardiovascular care, especially for high-risk and underserved populations.
 
 
 
