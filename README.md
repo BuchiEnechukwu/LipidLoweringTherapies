@@ -1,47 +1,79 @@
-# NWL LLT Report: Lipid Lowering Therapy Eligibility in North West London
-This project investigates eligibility patterns for lipid lowering therapies (LLTs) in North West London using the CVDPREVENT audit dataset. It identifies population segments potentially missing out on preventive cardiovascular treatment and assesses uptake inequalities across demographic and clinical risk groups.
+# Identifying Gaps in Lipid-Lowering Therapy Uptake in North West London
 
-## Project Overview
-•	Objective: To estimate the number of people eligible for LLT in North West London and identify potential gaps in access and treatment across demographic and risk groups.
-•	Dataset: NHS England CVDPREVENT dataset (2021–2022)
-•	Location: North West London (NWL) Integrated Care System
-•	Main Deliverables: An automated R Markdown report, reproducible code, and visual summaries to support stakeholder decision-making.
+This repository contains an R-based analysis supporting the North West London (NWL) Integrated Care System's long-term condition mission:  
+**To prevent 25% of heart attacks and strokes by 2029, while addressing health inequalities.**
 
-## Methods
-•	Language: R
-•	Tools & Libraries: tidyverse, dplyr, readr, ggplot2, lubridate, knitr, rmarkdown
-•	Data Processing:
-•	Filtered and subsetted key indicators from the CVDPREVENT dataset.
-•	Focused on indicators relating to:
-•	Cardiovascular disease prevalence
-•	QRISK10 and QRISK20 eligibility thresholds
-•	Primary and secondary prevention metrics
-•	Equity Analysis:
-•	Stratified data by gender, practice group, and area deprivation.
-•	Examined inequalities in LLT uptake across priority groups and treatment pathways.
+The task involved using **CVDPREVENT open data** to identify patients in NWL who may be eligible for **lipid-lowering therapy (LLT)** but are not currently on treatment, with a focus on both primary and secondary prevention. The work also includes forecasting trends and identifying potential inequalities in treatment uptake.
 
-## Outputs and Visualisations
-•	Automated R Markdown Report:
-•	Generates descriptive summaries and figures for use in presentations and publications.
-•	Sample Visuals Include:
-•	Bar plots of LLT eligibility by condition and risk group
-•	Gender distribution of LLT uptake
-•	Gap analyses between eligible and treated populations
 
-## Key Insights
-•	Significant eligibility–treatment gap among patients with high QRISK scores and those with established cardiovascular disease.
-•	Gender and local authority-level variation in LLT coverage and adherence to clinical thresholds.
-•	Potential system-level opportunities for improving targeted prescribing and reducing cardiovascular inequalities.
 
-## Limitations
-•	Dependent on completeness and quality of routinely collected audit data.
-•	Limited by aggregated data structure (no individual-level patient data).
-•	QRISK scores estimated based on grouped indicators rather than full risk profiles.
+## Task Objectives
 
-## Future Work
-•	Integrate prescribing data to track LLT initiation over time.
-•	Expand to cover intersectional inequalities (e.g., ethnicity, age, comorbidities).
-•	Support co-design of local LLT improvement strategies with patients and clinicians.
+Commissioned as part of the NWL ICS Missions programme, this analysis addresses the following:
+
+- 📌 **How many patients with existing CVD (secondary prevention) are not on LLT?**
+- 📌 **How many high-risk patients (primary prevention) are not on LLT?**
+- 📌 **Are there disparities in uptake across boroughs or population groups?**
+- 📌 **What are the trends since Sept 2021, and what can we predict for the next 1–2 years?**
+
+The analysis informs targeted interventions for reducing cardiovascular risk and improving equity across North West London.
+
+
+
+## 📊 Data & Sources
+
+- **Dataset:** NHS CVDPREVENT Data Extract (September 2021 – March 2024)
+  - `CVDP009CHOL` – Treated with LLT (CVD, secondary prevention)
+  - `CVDP008CHOL` – Treated with LLT (QRISK10, primary prevention)
+- **Geography:** North West London Integrated Care System (borough-level)
+- **Format:** Excel exports from NHS Digital
+
+
+
+##  Methods Overview
+
+- **Data Wrangling:** `readxl`, `dplyr`, `lubridate`, `janitor`
+- **Exploratory Analysis:** Grouped and visualised LLT uptake across boroughs, risk groups, and time
+- **Inequality Assessment:** Disaggregated by gender, borough, and QRISK score
+- **Time Series Forecasting:** 
+  - Created monthly time series objects (2021–2024)
+  - Applied `auto.arima()` from the `forecast` package to predict LLT gaps up to 2026
+  - Visualised predicted untreated high-risk populations
+
+
+
+##  Repository Contents
+
+| File | Description |
+|------|-------------|
+| `NWL_LLTreport.Rmd` | Full R Markdown report (analysis, visualisation, forecasting) |
+| `CVDP009CHOL.xlsx` | Data extract – Secondary prevention |
+| `CVDP008CHOL.xlsx` | Data extract – Primary prevention |
+| `README.md` | Project overview and documentation |
+
+
+
+##  Key Insights
+
+- Thousands of high-risk patients remain untreated in both primary and secondary prevention categories.
+- Borough-level differences in LLT uptake suggest geographic inequalities.
+- Forecasts show the gap in treatment may persist or widen without targeted interventions by 2026.
+
+
+
+##  Tools & Environment
+
+- Language: **R**
+- Key Libraries: `tidyverse`, `lubridate`, `forecast`, `tseries`, `janitor`, `ggplot2`
+
+
+
+##  Contact
+
+Prepared by [@BuchiEnechukwu](https://github.com/BuchiEnechukwu)  
+Please contact via GitHub for questions or collaboration.
+
+
 
 ## Relevance
 The findings inform public health and primary care strategies to close LLT gaps and improve secondary prevention in cardiovascular care—especially for high-risk and underserved populations.
