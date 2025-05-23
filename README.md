@@ -9,7 +9,7 @@ The task involved using **CVDPREVENT open data** to identify patients in NWL who
 
 ## Task Objectives
 
-Commissioned as part of the NWL ICS Missions programme, this analysis addresses the following:
+This analysis addresses the following:
 
 -  **How many patients with existing CVD (secondary prevention) are not on LLT?**
 -  **How many high-risk patients (primary prevention) are not on LLT?**
