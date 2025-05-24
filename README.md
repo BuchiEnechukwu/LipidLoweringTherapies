@@ -1,8 +1,5 @@
 # Identifying Gaps in Lipid-Lowering Therapy Uptake in North West London
 
-This repository contains an R-based analysis supporting the North West London (NWL) Integrated Care System's long-term condition mission:  
-**To prevent 25% of heart attacks and strokes by 2029, while addressing health inequalities.**
-
 The task involved using **CVDPREVENT open data** to identify patients in NWL who may be eligible for **lipid-lowering therapy (LLT)** but are not currently on treatment, with a focus on both primary and secondary prevention. The work also includes forecasting trends and identifying potential inequalities in treatment uptake.
 
 
